@@ -31,25 +31,27 @@ extern "C" {
 
 #ifndef BYTE_READER_NO_VECTOR
 #include <vector>
+
+void VectorReader (lua_State * L, class ByteReader & reader, int arg, void *);
 #endif
 
-struct ByteReaderUchar {
-  unsigned char * mBytes; // Stream of bytes
-  size_t mCount; // Byte count
+struct ByteReaderFunc {
+  void (*mGetBytes)(lua_State * L, class ByteReader & reader, int arg, void * context); // Reader function
+  void * mContext; // Context, if any
 };
 
 class ByteReader {
 public:
   const void * mBytes; // Resolved byte stream
   size_t mCount; // Number of bytes available in stream
-  bool mForbidden; // Byte-reading explicitly disallowed?
 
   ByteReader (lua_State * L, int arg, bool bReplace = true);
 
-  enum { eForbidden, eVector, eUchar, eNone };
+  static void Register (lua_State * L, ByteReaderFunc * func, bool bUseTop = false);
+  static ByteReaderFunc * Register (lua_State * L);
 private:
   void LookupBytes (lua_State * L, int arg);
-  void PointToBytes (lua_State * L, int arg, int option);
+  void PointToBytes (lua_State * L, int arg, ByteReaderFunc * func);
   void PushError (lua_State * L, const char * format, int arg);
 };
 
@@ -62,33 +64,23 @@ private:
 // If it happens to be a string, we can use its bytes and length directly.
 //
 // Failing that, the object's metatable (if it has one) is queried for field
-// **__bytes**. Should no value at all be found, the object clearly does not
-// honor the protocol, so we quit.
+// **__bytes**. If no value is found, the object clearly does not honor the
+// protocol, so we quit.
 //
-// When **__bytes** has a value of **"forbidden"**, the object's type is
-// understood to say "byte-reading is specifically disallowed". In this
-// situation, there is nothing more we can do, so we quit; the reader's
-// **mForbidden** member will be **true** to indicate the special
-// circumstances.
+// Otherwise, if **__bytes** is neither a light userdata nor a function, we
+// once again use the object's bytes and length directly.
 //
-// If access is allowed, we next check whether the object is a full userdata.
-// If so, there are a few possibilities:
+// When **__bytes** is a light userdata, it is interpreted as a pointer to a
+// `ByteReaderFunc` struct, containing a reader function **mGetBytes** and a
+// user-supplied context **mContext**. (The userdata must be present as a key
+// in the Lua registry.) The function is called as `func(L, reader, arg, mContext)`,
+// where `L` and 'arg` are the Lua state and stack position of the object,
+// respectively, and `reader` is our byte reader whose **mBytes** and **mCount**
+// members the function should supply.
 //
-// - **__bytes** has a value of **"uchar"**: the userdata's first bytes contain
-// a `ByteReaderUchar` struct, with
-// **mBytes** and **mCount** members.
+// In the foregoing cases, the object must be a full userdata.
 //
-// - **__bytes** has a value of **"vector"**: the userdata's first bytes hold a
-// `std::vector<unsigned char>`. Its contents supply the bytes, with `size()`
-// as the count. **BYTE\_READER\_NO\_VECTOR** may be defined to disable the
-// vector code path.
-//
-// - Last but not least, we use the userdata's bytes and length directly, as
-// done with strings. When **__bytes** contains an integer, it is assumed to be
-// an offset (between 0 and the length minus 1) where valid bytes begin, with
-// the final length shortened accordingly.
-//
-// If the object was not a full userdata, **__bytes** must be a function, to be
+// The remaining possiblity is that **__bytes** is a function, to be
 // called as
 //   object = func(object)
 // The process (i.e. is the object a string? if not, does it have a **__bytes**
