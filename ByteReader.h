@@ -50,7 +50,8 @@ public:
   static void Register (lua_State * L, ByteReaderFunc * func, bool bUseTop = false);
   static ByteReaderFunc * Register (lua_State * L);
 private:
-  void LookupBytes (lua_State * L, int arg);
+  bool LookupBytes (lua_State * L, int arg);
+
   void PointToBytes (lua_State * L, int arg, ByteReaderFunc * func);
   void PushError (lua_State * L, const char * format, int arg);
 };

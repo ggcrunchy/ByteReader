@@ -50,11 +50,11 @@ ByteReader::ByteReader (lua_State * L, int arg, bool bReplace) : mBytes(NULL)
   {
     if (arg < 0 && -arg <= lua_gettop(L)) arg = lua_gettop(L) + arg + 1; // account for negative indices in stack
 
-    if (lua_type(L, 1) == LUA_TUSERDATA && luaL_getmetafield(L, arg, "__bytes")) // ...[, __bytes]
+    if (lua_type(L, arg) == LUA_TUSERDATA && luaL_getmetafield(L, arg, "__bytes")) // ...[, __bytes]
     {
-      LookupBytes(L, arg);
+      bool bGrew = LookupBytes(L, arg);
 
-      if (bReplace && mBytes) lua_replace(L, arg); // ..., bytes, ...
+      if (bGrew && bReplace && mBytes) lua_replace(L, arg); // ..., bytes, ...
     }
 
     else PushError(L, "Unable to read bytes from %s at index %i", arg); // ..., err
@@ -96,7 +96,7 @@ ByteReaderFunc * ByteReader::Register (lua_State * L)
 }
 
 // Try to get bytes from an object's __bytes metafield
-void ByteReader::LookupBytes (lua_State * L, int arg)
+bool ByteReader::LookupBytes (lua_State * L, int arg)
 {
   if (!lua_isfunction(L, -1))
   {
@@ -125,12 +125,16 @@ void ByteReader::LookupBytes (lua_State * L, int arg)
 
     if (lua_pcall(L, 1, 1, 0) == 0) // ..., bytes / false[, err]
     {
-      ByteReader result(L, -1, false);
+      ByteReader result(L, -1, true);
 
       mBytes = result.mBytes;
       mCount = result.mCount;
+
+      return true;
     }
   }
+
+  return false;
 }
 
 // Point to the userdata's bytes, possibly at an offset
