@@ -56,44 +56,4 @@ private:
   void PushError (lua_State * L, const char * format, int arg);
 };
 
-// A `ByteReader` transforms Lua inputs adhering to a simple protocol into
-// a bytes-count pair that other C and C++ APIs are able to safely consume.
-// The protocol goes as follows:
-//
-// The object at index `arg` is examined.
-//
-// If it happens to be a string, we can use its bytes and length directly.
-//
-// Failing that, the object's metatable (if it has one) is queried for field
-// **__bytes**. If no value is found, the object clearly does not honor the
-// protocol, so we quit.
-//
-// Otherwise, if **__bytes** is neither a light userdata nor a function, we
-// once again use the object's bytes and length directly.
-//
-// When **__bytes** is a light userdata, it is interpreted as a pointer to a
-// `ByteReaderFunc` struct, containing a reader function **mGetBytes** and a
-// user-supplied context **mContext**. (The userdata must be present as a key
-// in the Lua registry.) The function is called as `func(L, reader, arg, mContext)`,
-// where `L` and 'arg` are the Lua state and stack position of the object,
-// respectively, and `reader` is our byte reader whose **mBytes** and **mCount**
-// members the function should supply.
-//
-// In the foregoing cases, the object must be a full userdata.
-//
-// The remaining possiblity is that **__bytes** is a function, to be
-// called as
-//   object = func(object)
-// The process (i.e. is the object a string? if not, does it have a **__bytes**
-// metafield? et al.) then recurses on this new object and uses its result
-// instead.
-//
-// When bytes are successfully found, the reader's **mBytes** member will point
-// to them, with the byte count stored in **mCount**. If `bReplace` is **true**
-// (the default), the bytes (either a string or full userdata) are moved into
-// slot `arg`, overwriting the original object.
-//
-// Should an error happen along the way, **mBytes** will be NULL and an error
-// message will be pushed on top of the stack.
-
 #endif

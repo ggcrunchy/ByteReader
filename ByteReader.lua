@@ -1,0 +1,61 @@
+--- A `ByteReader` transforms Lua inputs adhering to a simple protocol into
+-- a bytes-count pair that other C and C++ APIs are able to safely consume.
+-- The protocol goes as follows:
+--
+-- The object at index `arg` (in Lua state `L`) is examined.
+--
+-- If it happens to be a string, we can use its bytes and length directly.
+--
+-- Failing that, the object's metatable (if it has one) is queried for field
+-- **__bytes**. If no value is found, the object clearly does not honor the
+-- protocol, so we error out.
+--
+-- If **__bytes** is neither a light userdata nor a function, we have a
+-- garden-variety object and can use its bytes and length directly, as with strings.
+--
+-- When **__bytes** is a light userdata, it is assumed to point to a `ByteReaderFunc`
+-- struct, containing a reader function `mGetBytes` and a user-supplied context
+-- `mContext`. (The light userdata must also be present as a key in the Lua
+-- registry.) This is called as `mGetBytes(L, reader, arg, mContext)`, where
+-- `reader` is our byte reader, whose **mBytes** and **mCount** members the
+-- function should supply. (See below how to handle errors.)
+--
+-- The object in the foregoing cases must be a full userdata.
+--
+-- The remaining possibility is that **__bytes** is a function, to be called as
+--    object = func(object)
+-- The process (i.e. is the object a string? if not, does it have a **__bytes**
+-- metafield? et al.) then recurses on this new object, using the final result.
+--
+-- When bytes are successfully found, the reader's **mBytes** member will point
+-- to them, with the byte count stored in **mCount**. If `bReplace` is **true**
+-- (the default), the final bytes object&mdash;either a string or full
+-- userdata&mdash;is moved into slot `arg`, overwriting the original object
+-- (this only matters in the **__bytes**-as-function case, since otherwise the
+-- object will already be in position).
+--
+-- Should an error happen along the way, **mBytes** will be `NULL` and an error
+-- message is pushed on the stack.
+
+--
+-- Permission is hereby granted, free of charge, to any person obtaining
+-- a copy of this software and associated documentation files (the
+-- "Software"), to deal in the Software without restriction, including
+-- without limitation the rights to use, copy, modify, merge, publish,
+-- distribute, sublicense, and/or sell copies of the Software, and to
+-- permit persons to whom the Software is furnished to do so, subject to
+-- the following conditions:
+--
+-- The above copyright notice and this permission notice shall be
+-- included in all copies or substantial portions of the Software.
+--
+-- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+-- EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+-- MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+-- IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+-- CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+-- TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+-- SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+--
+-- [ MIT license: http://www.opensource.org/licenses/mit-license.php ]
+--
