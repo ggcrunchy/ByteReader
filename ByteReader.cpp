@@ -28,7 +28,7 @@
 // Byte reader function for std::vector<unsigned char>
 void VectorReader (lua_State * L, ByteReader & reader, int arg, void *)
 {
-  auto vec = (std::vector<unsigned char> *)lua_touserdata(L, arg);
+  auto vec = static_cast<std::vector<unsigned char> *>(lua_touserdata(L, arg));
 
   reader.mBytes = vec->data();
   reader.mCount = vec->size();
@@ -37,7 +37,7 @@ void VectorReader (lua_State * L, ByteReader & reader, int arg, void *)
 #endif
 
 // Constructor
-ByteReader::ByteReader (lua_State * L, int arg, bool bReplace) : mBytes(NULL)
+ByteReader::ByteReader (lua_State * L, int arg, bool bReplace) : mBytes(nullptr)
 {
   // Take the object's length as a best guess of the byte count. If the object is a string,
   // these are exactly the bytes we want.
@@ -85,10 +85,10 @@ void ByteReader::Register (lua_State * L, ByteReaderFunc * func, bool bUseTop)
 // Helper to register a reader function that handles some of the memory details
 ByteReaderFunc * ByteReader::Register (lua_State * L)
 {
-  ByteReaderFunc * func = (ByteReaderFunc *)lua_newuserdata(L, sizeof(ByteReaderFunc));	// ..., func
+  ByteReaderFunc * func = static_cast<ByteReaderFunc *>(lua_newuserdata(L, sizeof(ByteReaderFunc))); // ..., func
 
-  func->mGetBytes = NULL;
-  func->mContext = NULL;
+  func->mGetBytes = nullptr;
+  func->mContext = nullptr;
 
   Register(L, func, true);
 
@@ -100,12 +100,12 @@ bool ByteReader::LookupBytes (lua_State * L, int arg)
 {
   if (!lua_isfunction(L, -1))
   {
-    ByteReaderFunc * func = NULL;
+    ByteReaderFunc * func = nullptr;
     int registered = 1;
 
     if (lua_type(L, -1) == LUA_TLIGHTUSERDATA)
     {
-      func = (ByteReaderFunc *)func;
+      func = static_cast<ByteReaderFunc *>(lua_touserdata(L, -1));
 
       lua_rawget(L, LUA_REGISTRYINDEX);	// ..., func?
 
@@ -144,7 +144,7 @@ void ByteReader::PointToBytes (lua_State * L, int arg, ByteReaderFunc * func)
   {
     if (func) func->mGetBytes(L, *this, arg, func->mContext);
 
-    else mBytes = (unsigned char *)lua_touserdata(L, arg);
+    else mBytes = static_cast<unsigned char *>(lua_touserdata(L, arg));
   }
 
   else PushError(L, "Cannot point to %s at index %i", arg);
