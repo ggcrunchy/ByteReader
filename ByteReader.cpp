@@ -37,27 +37,27 @@ void VectorReader (lua_State * L, ByteReader & reader, int arg, void *)
 #endif
 
 // Constructor
-ByteReader::ByteReader (lua_State * L, int arg, bool bReplace) : mBytes(nullptr)
+ByteReader::ByteReader (lua_State * L, int arg, bool bReplace) : mBytes(nullptr), mPos(arg)
 {
+  if (arg < 0 && -arg <= lua_gettop(L)) mPos = lua_gettop(L) + arg + 1; // account for negative indices in stack
+
   // Take the object's length as a best guess of the byte count. If the object is a string,
   // these are exactly the bytes we want.
-  mCount = lua_objlen(L, arg);
+  mCount = lua_objlen(L, mPos);
 
-  if (lua_isstring(L, arg)) mBytes = lua_tostring(L, arg);
+  if (lua_isstring(L, mPos)) mBytes = lua_tostring(L, mPos);
 
   // Otherwise, the object must be a full userdata, whose __bytes metafield is queried.
   else
   {
-    if (arg < 0 && -arg <= lua_gettop(L)) arg = lua_gettop(L) + arg + 1; // account for negative indices in stack
-
-    if (lua_type(L, arg) == LUA_TUSERDATA && luaL_getmetafield(L, arg, "__bytes")) // ...[, __bytes]
+    if (lua_type(L, mPos) == LUA_TUSERDATA && luaL_getmetafield(L, mPos, "__bytes")) // ...[, __bytes]
     {
-      bool bGrew = LookupBytes(L, arg);
+      bool bGrew = LookupBytes(L);
 
-      if (bGrew && bReplace && mBytes) lua_replace(L, arg); // ..., bytes, ...
+      if (bGrew && bReplace && mBytes) lua_replace(L, mPos); // ..., bytes, ...
     }
 
-    else PushError(L, "Unable to read bytes from %s at index %i", arg); // ..., err
+    else PushError(L, "Unable to read bytes from %s at index %i"); // ..., err
   }
 }
 
@@ -96,7 +96,7 @@ ByteReaderFunc * ByteReader::Register (lua_State * L)
 }
 
 // Try to get bytes from an object's __bytes metafield
-bool ByteReader::LookupBytes (lua_State * L, int arg)
+bool ByteReader::LookupBytes (lua_State * L)
 {
   if (!lua_isfunction(L, -1))
   {
@@ -114,14 +114,14 @@ bool ByteReader::LookupBytes (lua_State * L, int arg)
 
 	lua_pop(L, 1); // ...
 
-    if (registered) PointToBytes(L, arg, func);
+    if (registered) PointToBytes(L, func);
 
-	else PushError(L, "Unregistered reader attached to %s at index %i", arg);
+	else PushError(L, "Unregistered reader attached to %s at index %i");
   }
 
   else
   {
-    lua_pushvalue(L, arg); // ..., __bytes, object
+    lua_pushvalue(L, mPos); // ..., __bytes, object
 
     if (lua_pcall(L, 1, 1, 0) == 0) // ..., bytes / false[, err]
     {
@@ -138,20 +138,20 @@ bool ByteReader::LookupBytes (lua_State * L, int arg)
 }
 
 // Point to the userdata's bytes, possibly at an offset
-void ByteReader::PointToBytes (lua_State * L, int arg, ByteReaderFunc * func)
+void ByteReader::PointToBytes (lua_State * L, ByteReaderFunc * func)
 {
-  if (lua_type(L, arg) == LUA_TUSERDATA)
+  if (lua_type(L, mPos) == LUA_TUSERDATA)
   {
-    if (func) func->mGetBytes(L, *this, arg, func->mContext);
+    if (func) func->mGetBytes(L, *this, mPos, func->mContext);
 
-    else mBytes = static_cast<unsigned char *>(lua_touserdata(L, arg));
+    else mBytes = static_cast<unsigned char *>(lua_touserdata(L, mPos));
   }
 
-  else PushError(L, "Cannot point to %s at index %i", arg);
+  else PushError(L, "Cannot point to %s at index %i");
 }
 
 // Wrapper for common error-pushing pattern
-void ByteReader::PushError (lua_State * L, const char * format, int arg)
+void ByteReader::PushError (lua_State * L, const char * format)
 {
-  lua_pushfstring(L, format, luaL_typename(L, arg), arg); // ..., err
+  lua_pushfstring(L, format, luaL_typename(L, mPos), mPos); // ..., err
 }

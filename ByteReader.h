@@ -44,16 +44,17 @@ class ByteReader {
 public:
   const void * mBytes; // Resolved byte stream
   size_t mCount; // Number of bytes available in stream
+  int mPos; // Original (absolute) position, to allow later replacements
 
   ByteReader (lua_State * L, int arg, bool bReplace = true);
 
   static void Register (lua_State * L, ByteReaderFunc * func, bool bUseTop = false);
   static ByteReaderFunc * Register (lua_State * L);
 private:
-  bool LookupBytes (lua_State * L, int arg);
+  bool LookupBytes (lua_State * L);
 
-  void PointToBytes (lua_State * L, int arg, ByteReaderFunc * func);
-  void PushError (lua_State * L, const char * format, int arg);
+  void PointToBytes (lua_State * L, ByteReaderFunc * func);
+  void PushError (lua_State * L, const char * format);
 };
 
 #endif
