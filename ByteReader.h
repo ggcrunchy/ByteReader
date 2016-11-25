@@ -42,7 +42,7 @@ struct ByteReaderFunc {
 
 class ByteReader {
 public:
-  const void * mBytes; // Resolved byte stream
+  const void * mBytes{nullptr}; // Resolved byte stream
   size_t mCount; // Number of bytes available in stream
   int mPos; // Original (absolute) position, to allow later replacements
 

@@ -37,7 +37,7 @@ void VectorReader (lua_State * L, ByteReader & reader, int arg, void *)
 #endif
 
 // Constructor
-ByteReader::ByteReader (lua_State * L, int arg, bool bReplace) : mBytes(nullptr), mPos(arg)
+ByteReader::ByteReader (lua_State * L, int arg, bool bReplace) : mPos(arg)
 {
   if (arg < 0 && -arg <= lua_gettop(L)) mPos = lua_gettop(L) + arg + 1; // account for negative indices in stack
 
@@ -125,7 +125,7 @@ bool ByteReader::LookupBytes (lua_State * L)
 
     if (lua_pcall(L, 1, 1, 0) == 0) // ..., bytes / false[, err]
     {
-      ByteReader result(L, -1, true);
+	  ByteReader result{L, -1, true};
 
       mBytes = result.mBytes;
       mCount = result.mCount;
