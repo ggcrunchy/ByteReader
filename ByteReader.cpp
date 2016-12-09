@@ -23,8 +23,6 @@
 
 #include "ByteReader.h"
 
-#ifndef BYTE_READER_NO_VECTOR
-
 // Byte reader function for std::vector<unsigned char>
 void VectorReader (lua_State * L, ByteReader & reader, int arg, void *)
 {
@@ -33,8 +31,6 @@ void VectorReader (lua_State * L, ByteReader & reader, int arg, void *)
   reader.mBytes = vec->data();
   reader.mCount = vec->size();
 }
-
-#endif
 
 // Constructor
 ByteReader::ByteReader (lua_State * L, int arg, bool bReplace) : mPos(arg)

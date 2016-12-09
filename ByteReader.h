@@ -29,11 +29,9 @@ extern "C" {
   #include "lauxlib.h"
 }
 
-#ifndef BYTE_READER_NO_VECTOR
 #include <vector>
 
 void VectorReader (lua_State * L, class ByteReader & reader, int arg, void *);
-#endif
 
 struct ByteReaderFunc {
   void (*mGetBytes)(lua_State * L, class ByteReader & reader, int arg, void * context); // Reader function
@@ -44,6 +42,7 @@ class ByteReader {
 public:
   const void * mBytes{nullptr}; // Resolved byte stream
   size_t mCount; // Number of bytes available in stream
+  std::vector<size_t> mStrides;	// Zero or more strides associated with the stream
   int mPos; // Original (absolute) position, to allow later replacements
 
   ByteReader (lua_State * L, int arg, bool bReplace = true);
