@@ -33,7 +33,7 @@ void VectorReader (lua_State * L, ByteReader & reader, int arg, void *)
 }
 
 // Constructor
-ByteReader::ByteReader (lua_State * L, int arg, bool bReplace) : mPos(arg)
+ByteReader::ByteReader (lua_State * L, int arg, bool bReplace) : mPos{arg}
 {
   if (arg < 0 && -arg <= lua_gettop(L)) mPos = lua_gettop(L) + arg + 1; // account for negative indices in stack
 
@@ -110,7 +110,7 @@ bool ByteReader::LookupBytes (lua_State * L)
 
 	lua_pop(L, 1); // ...
 
-    if (registered) PointToBytes(L, func);
+    if (registered) return PointToBytes(L, func);
 
 	else PushError(L, "Unregistered reader attached to %s at index %i");
   }
@@ -134,16 +134,28 @@ bool ByteReader::LookupBytes (lua_State * L)
 }
 
 // Point to the userdata's bytes, possibly at an offset
-void ByteReader::PointToBytes (lua_State * L, ByteReaderFunc * func)
+bool ByteReader::PointToBytes (lua_State * L, ByteReaderFunc * func)
 {
   if (lua_type(L, mPos) == LUA_TUSERDATA)
   {
-    if (func) func->mGetBytes(L, *this, mPos, func->mContext);
+    if (func)
+    {
+      int top = lua_gettop(L);
+
+      if (func->mGetBytes(L, *this, mPos, func->mContext) && lua_gettop(L) > top)
+	  {
+        if (lua_gettop(L) - top > 1) lua_pushliteral(L, "Returned too many arguments");
+
+        else return true;
+	  }
+	}
 
     else mBytes = static_cast<unsigned char *>(lua_touserdata(L, mPos));
   }
 
   else PushError(L, "Cannot point to %s at index %i");
+
+  return false;
 }
 
 // Wrapper for common error-pushing pattern

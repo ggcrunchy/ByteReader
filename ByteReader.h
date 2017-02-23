@@ -34,7 +34,7 @@ extern "C" {
 void VectorReader (lua_State * L, class ByteReader & reader, int arg, void *);
 
 struct ByteReaderFunc {
-  void (*mGetBytes)(lua_State * L, class ByteReader & reader, int arg, void * context); // Reader function
+  bool (*mGetBytes)(lua_State * L, class ByteReader & reader, int arg, void * context); // Reader function
   void * mContext; // Context, if any
 };
 
@@ -51,8 +51,8 @@ public:
   static ByteReaderFunc * Register (lua_State * L);
 private:
   bool LookupBytes (lua_State * L);
+  bool PointToBytes (lua_State * L, ByteReaderFunc * func);
 
-  void PointToBytes (lua_State * L, ByteReaderFunc * func);
   void PushError (lua_State * L, const char * format);
 };
 
