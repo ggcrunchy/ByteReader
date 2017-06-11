@@ -53,7 +53,7 @@ ByteReader::ByteReader (lua_State * L, int arg, bool bReplace) : mPos{arg}
       if (bGrew && bReplace && mBytes) lua_replace(L, mPos); // ..., bytes, ...
     }
 
-    else PushError(L, "Unable to read bytes from %s at index %i"); // ..., err
+    else PushError(L, "Unable to read bytes from %s at index %d"); // ..., err
   }
 }
 
@@ -112,7 +112,7 @@ bool ByteReader::LookupBytes (lua_State * L)
 
     if (registered) return PointToBytes(L, func);
 
-	else PushError(L, "Unregistered reader attached to %s at index %i");
+	else PushError(L, "Unregistered reader attached to %s at index %d");
   }
 
   else
@@ -153,7 +153,7 @@ bool ByteReader::PointToBytes (lua_State * L, ByteReaderFunc * func)
     else mBytes = static_cast<unsigned char *>(lua_touserdata(L, mPos));
   }
 
-  else PushError(L, "Cannot point to %s at index %i");
+  else PushError(L, "Cannot point to %s at index %d");
 
   return false;
 }
