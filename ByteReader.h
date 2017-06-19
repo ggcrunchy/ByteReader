@@ -32,6 +32,7 @@ extern "C" {
 #include <vector>
 
 void VectorReader (lua_State * L, class ByteReader & reader, int arg, void *);
+void VectorReader (lua_State * L, class ByteReader & reader, const std::vector<unsigned char> & vec);
 
 struct ByteReaderFunc {
   bool (*mGetBytes)(lua_State * L, class ByteReader & reader, int arg, void * context); // Reader function

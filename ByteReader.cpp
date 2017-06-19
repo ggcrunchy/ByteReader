@@ -32,6 +32,17 @@ void VectorReader (lua_State * L, ByteReader & reader, int arg, void *)
   reader.mCount = vec->size();
 }
 
+void VectorReader (lua_State * L, class ByteReader & reader, const std::vector<unsigned char> & vec)
+{
+  const void * ptr = &vec;
+
+  lua_pushlightuserdata(L, const_cast<void *>(ptr)); // ..., vec
+
+  VectorReader(L, reader, -1, nullptr);
+
+  lua_pop(L, 1); // ...
+}
+
 // Constructor
 ByteReader::ByteReader (lua_State * L, int arg, bool bReplace) : mPos{arg}
 {
@@ -86,7 +97,7 @@ ByteReaderFunc * ByteReader::Register (lua_State * L)
   func->mGetBytes = nullptr;
   func->mContext = nullptr;
 
-  Register(L, func, true);
+  Register(L, func, true); // ...
 
   return func;
 }
