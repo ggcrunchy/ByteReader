@@ -24,7 +24,7 @@
 #include "ByteReader.h"
 
 // Byte reader function for std::vector<unsigned char>
-void VectorReader (lua_State * L, ByteReader & reader, int arg, void *)
+void BR_NAMESPACE::VectorReader (lua_State * L, ByteReader & reader, int arg, void *)
 {
   auto vec = static_cast<std::vector<unsigned char> *>(lua_touserdata(L, arg));
 
@@ -32,7 +32,7 @@ void VectorReader (lua_State * L, ByteReader & reader, int arg, void *)
   reader.mCount = vec->size();
 }
 
-void VectorReader (lua_State * L, class ByteReader & reader, const std::vector<unsigned char> & vec)
+void BR_NAMESPACE::VectorReader (lua_State * L, class ByteReader & reader, const std::vector<unsigned char> & vec)
 {
   const void * ptr = &vec;
 
