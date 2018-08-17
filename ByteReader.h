@@ -31,12 +31,17 @@ extern "C" {
 #include <vector>
 
 #ifdef BR_NAMESPACE_PREFIX
-	#define BR_NAMESPACE CEU_NAMESPACE_PREFIX ## _BR
+  #define BR_BEGIN_NAMESPACE() namespace BR_NAMESPACE_PREFIX {
+  #define BR_CLOSE_NAMESPACE() }
+  #define BR_END_NAMESPACE() BR_CLOSE_NAMESPACE()    \
+                             using namespace BR_NAMESPACE_PREFIX;
 #else
-	#define BR_NAMESPACE BR
+  #define BR_BEGIN_NAMESPACE()
+  #define BR_CLOSE_NAMESPACE()
+  #define BR_END_NAMESPACE()
 #endif
 
-namespace BR_NAMESPACE {
+BR_BEGIN_NAMESPACE()
   void VectorReader (lua_State * L, class ByteReader & reader, int arg, void *);
   void VectorReader (lua_State * L, class ByteReader & reader, const std::vector<unsigned char> & vec);
 
@@ -62,6 +67,4 @@ namespace BR_NAMESPACE {
 
     void PushError (lua_State * L, const char * format);
   };
-}
-
-using namespace BR_NAMESPACE;
+BR_END_NAMESPACE()
