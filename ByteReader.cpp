@@ -45,7 +45,7 @@ BR_BEGIN_NAMESPACE()
   }
 
   // Constructor
-  ByteReader::ByteReader (lua_State * L, int arg, bool bReplace) : mPos{arg}
+  ByteReader::ByteReader (lua_State * L, int arg, const ByteReaderOpts & opts) : mPos{arg}
   {
     if (arg < 0 && -arg <= lua_gettop(L)) mPos = lua_gettop(L) + arg + 1; // account for negative indices in stack
 
@@ -53,18 +53,19 @@ BR_BEGIN_NAMESPACE()
     // these are exactly the bytes we want.
     mCount = lua_objlen(L, mPos);
 
-    if (lua_isstring(L, mPos)) mBytes = lua_tostring(L, mPos);
+    if (opts.mRequired.empty() && lua_isstring(L, mPos)) mBytes = lua_tostring(L, mPos);
 
     // Otherwise, the object must be a full userdata, whose __bytes metafield is queried.
     else
     {
       if (lua_type(L, mPos) == LUA_TUSERDATA && luaL_getmetafield(L, mPos, "__bytes")) // ...[, __bytes]
       {
-        bool bGrew = LookupBytes(L);
+        bool bGrew = LookupBytes(L, opts);
 
-        if (bGrew && bReplace && mBytes) lua_replace(L, mPos); // ..., bytes, ...
+        if (bGrew && opts.mReplace && mBytes) lua_replace(L, mPos); // ..., bytes, ...
       }
 
+      else if (!opts.mRequired.empty()) PushError(L, "Unable to read and / or write bytes from %s at index %d"); // ..., err
       else PushError(L, "Unable to read bytes from %s at index %d"); // ..., err
     }
   }
@@ -104,7 +105,7 @@ BR_BEGIN_NAMESPACE()
   }
 
   // Try to get bytes from an object's __bytes metafield
-  bool ByteReader::LookupBytes (lua_State * L)
+  bool ByteReader::LookupBytes (lua_State * L, const ByteReaderOpts & opts)
   {
     if (!lua_isfunction(L, -1))
     {
@@ -122,7 +123,7 @@ BR_BEGIN_NAMESPACE()
 
 	  lua_pop(L, 1); // ...
 
-      if (registered) return PointToBytes(L, func);
+      if (registered) return PointToBytes(L, func, opts);
 
 	  else PushError(L, "Unregistered reader attached to %s at index %d");
     }
@@ -133,7 +134,7 @@ BR_BEGIN_NAMESPACE()
 
       if (lua_pcall(L, 1, 1, 0) == 0) // ..., bytes / false[, err]
       {
-	    ByteReader result{L, -1, true};
+	    ByteReader result{L, -1, opts};
 
         mBytes = result.mBytes;
         mCount = result.mCount;
@@ -146,13 +147,43 @@ BR_BEGIN_NAMESPACE()
   }
 
   // Point to the userdata's bytes, possibly at an offset
-  bool ByteReader::PointToBytes (lua_State * L, ByteReaderFunc * func)
+  bool ByteReader::PointToBytes (lua_State * L, ByteReaderFunc * func, const ByteReaderOpts & opts)
   {
     if (lua_type(L, mPos) == LUA_TUSERDATA)
     {
       if (func)
       {
         int top = lua_gettop(L);
+
+        if (!opts.mRequired.empty())
+        {
+            bool bOK = false;
+
+            if (func->mEnsureSize) bOK = ByteReaderOpts::kCurrent == opts.mRequired.front() || func->mEnsureSize(L, *this, mPos, func->mContext, opts.mRequired);
+
+            if (!bOK)
+            {
+                if (func->mEnsureSize) PushError(L, "Unable to ensure requested size");
+                else PushError(L, "Bytes are not writable");
+
+                return false;
+            }
+        }
+
+        if (opts.mGetStrides)
+        {
+            bool bOK = false;
+
+            if (func->mGetStrides) bOK = func->mGetStrides(L, *this, mPos, func->mContext);
+
+            if (!bOK)
+            {
+                if (!func->mGetStrides) PushError(L, "No stride getter available");
+                else PushError(L, "Unable to get strides");
+
+                return false;
+            }
+        }
 
         if (func->mGetBytes(L, *this, mPos, func->mContext) && lua_gettop(L) > top)
 	    {
@@ -162,7 +193,8 @@ BR_BEGIN_NAMESPACE()
 	    }
 	  }
 
-      else mBytes = static_cast<unsigned char *>(lua_touserdata(L, mPos));
+      else if (opts.mRequired.empty()) mBytes = static_cast<unsigned char *>(lua_touserdata(L, mPos));
+      else PushError(L, "Userdata is not writable");
     }
 
     else PushError(L, "Cannot point to %s at index %d");
@@ -175,4 +207,19 @@ BR_BEGIN_NAMESPACE()
   {
     lua_pushfstring(L, format, luaL_typename(L, mPos), mPos); // ..., err
   }
+
+  ByteReaderWriter::ByteReaderWriter (lua_State * L, int arg, const ByteReaderOpts & opts) : ByteReader{L, arg, opts}
+  {
+  }
+
+  ByteReaderWriterSized::ByteReaderWriterSized (lua_State * L, int arg, size_t size, const ByteReaderOpts & opts)
+    : ByteReader{ L, arg, ByteReaderOpts{opts}.SetRequired({size}) }
+  {
+  }
+
+  ByteReaderWriterMultipleSized::ByteReaderWriterMultipleSized (lua_State * L, int arg, const std::vector<size_t> & sizes, const ByteReaderOpts & opts)
+      : ByteReader{ L, arg, ByteReaderOpts{opts}.SetRequired(sizes) }
+  {
+  }
+
 BR_CLOSE_NAMESPACE()

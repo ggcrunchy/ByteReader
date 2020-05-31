@@ -46,8 +46,22 @@ BR_BEGIN_NAMESPACE()
   void VectorReader (lua_State * L, class ByteReader & reader, const std::vector<unsigned char> & vec);
 
   struct ByteReaderFunc {
+    bool (*mEnsureSize)(lua_State * L, class ByteReader & reader, int arg, void * context, const std::vector<size_t> & sizes) = nullptr;
     bool (*mGetBytes)(lua_State * L, class ByteReader & reader, int arg, void * context); // Reader function
-    void * mContext; // Context, if any
+    bool (*mGetStrides)(lua_State * L, class ByteReader & reader, int arg, void * context) = nullptr;
+    void * mContext{nullptr}; // Context, if any
+  };
+
+  struct ByteReaderOpts {
+    std::vector<size_t> mRequired;
+    bool mGetStrides{false};
+    bool mReplace{true};
+
+    enum : size_t { kCurrent = ~0U };
+
+    ByteReaderOpts & SetRequired (const std::vector<size_t> & req) { mRequired = req; return *this; }
+    ByteReaderOpts & SetGetStrides (bool get) { mGetStrides = get; return *this; }
+    ByteReaderOpts & SetReplace (bool replace) { mReplace = replace; return *this; }
   };
 
   class ByteReader {
@@ -57,14 +71,29 @@ BR_BEGIN_NAMESPACE()
     std::vector<size_t> mStrides;	// Zero or more strides associated with the stream
     int mPos; // Original (absolute) position, to allow later replacements
 
-    ByteReader (lua_State * L, int arg, bool bReplace = true);
+    ByteReader (lua_State * L, int arg, const ByteReaderOpts & opts = ByteReaderOpts{});
 
     static void Register (lua_State * L, ByteReaderFunc * func, bool bUseTop = false);
     static ByteReaderFunc * Register (lua_State * L);
   private:
-    bool LookupBytes (lua_State * L);
-    bool PointToBytes (lua_State * L, ByteReaderFunc * func);
+    bool LookupBytes (lua_State * L, const ByteReaderOpts & opts);
+    bool PointToBytes (lua_State * L, ByteReaderFunc * func, const ByteReaderOpts & opts);
 
     void PushError (lua_State * L, const char * format);
+  };
+
+  class ByteReaderWriter : public ByteReader {
+  public:
+    ByteReaderWriter (lua_State * L, int arg, const ByteReaderOpts & opts = ByteReaderOpts{});
+  };
+
+  class ByteReaderWriterSized : public ByteReader {
+  public:
+      ByteReaderWriterSized (lua_State * L, int arg, size_t size, const ByteReaderOpts & opts = ByteReaderOpts{});
+  };
+
+  class ByteReaderWriterMultipleSized : public ByteReader {
+  public:
+      ByteReaderWriterMultipleSized (lua_State * L, int arg, const std::vector<size_t> & sizes, const ByteReaderOpts & opts = ByteReaderOpts{});
   };
 BR_END_NAMESPACE()
