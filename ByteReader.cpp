@@ -172,14 +172,11 @@ BR_BEGIN_NAMESPACE()
 
         if (opts.mGetStrides)
         {
-            bool bOK = false;
-
-            if (func->mGetStrides) bOK = func->mGetStrides(L, *this, mPos, func->mContext);
+            bool bOK = !func->mGetStrides || func->mGetStrides(L, *this, mPos, func->mContext);
 
             if (!bOK)
             {
-                if (!func->mGetStrides) PushError(L, "No stride getter available");
-                else PushError(L, "Unable to get strides");
+                PushError(L, "Unable to get strides");
 
                 return false;
             }

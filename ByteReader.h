@@ -68,6 +68,7 @@ BR_BEGIN_NAMESPACE()
   public:
     const void * mBytes{nullptr}; // Resolved byte stream
     size_t mCount; // Number of bytes available in stream
+    size_t mNumComponents{0U};  // Components per stream element
     std::vector<size_t> mStrides;	// Zero or more strides associated with the stream
     int mPos; // Original (absolute) position, to allow later replacements
 
