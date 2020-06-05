@@ -46,10 +46,10 @@ BR_BEGIN_NAMESPACE()
   void VectorReader (lua_State * L, class ByteReader & reader, const std::vector<unsigned char> & vec);
 
   struct ByteReaderFunc {
-    bool (*mEnsureSize)(lua_State * L, class ByteReader & reader, int arg, void * context, const std::vector<size_t> & sizes) = nullptr;
+    bool (*mEnsureSize)(lua_State * L, class ByteReader & reader, int arg, void * context, const std::vector<size_t> & sizes);
     bool (*mGetBytes)(lua_State * L, class ByteReader & reader, int arg, void * context); // Reader function
-    bool (*mGetStrides)(lua_State * L, class ByteReader & reader, int arg, void * context) = nullptr;
-    void * mContext{nullptr}; // Context, if any
+    bool (*mGetStrides)(lua_State * L, class ByteReader & reader, int arg, void * context);
+    void * mContext; // Context, if any
   };
 
   struct ByteReaderOpts {

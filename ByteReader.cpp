@@ -96,7 +96,9 @@ BR_BEGIN_NAMESPACE()
   {
     ByteReaderFunc * func = static_cast<ByteReaderFunc *>(lua_newuserdata(L, sizeof(ByteReaderFunc))); // ..., func
 
+    func->mEnsureSize = nullptr;
     func->mGetBytes = nullptr;
+    func->mGetStrides = nullptr;
     func->mContext = nullptr;
 
     Register(L, func, true); // ...
