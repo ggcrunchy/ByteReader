@@ -212,7 +212,7 @@ BR_BEGIN_NAMESPACE()
   }
 
   ByteReaderWriterSized::ByteReaderWriterSized (lua_State * L, int arg, size_t size, const ByteReaderOpts & opts)
-    : ByteReader{ L, arg, ByteReaderOpts{opts}.SetRequired({size}) }
+      : ByteReader{ L, arg, ByteReaderOpts{opts}.SetRequired(std::vector<size_t>(1U, size)) }
   {
   }
 
